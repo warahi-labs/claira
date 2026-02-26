@@ -5,6 +5,12 @@ import RepoPicker from "./repo-picker";
 interface GitHubRepo {
   id: number;
   full_name: string;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  visibility: string;
+  updated_at: string;
+  default_branch: string;
 }
 
 async function fetchRepos(accessToken: string): Promise<GitHubRepo[]> {
@@ -24,8 +30,8 @@ export default async function Home() {
   const repos = session?.accessToken ? await fetchRepos(session.accessToken) : [];
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-sm space-y-6 text-center">
+    <main className="min-h-screen p-6">
+      <div className="mx-auto max-w-6xl space-y-6 text-center">
         <h1 className="text-3xl font-bold">Title</h1>
         {session?.user && (
           <div className="space-y-4">

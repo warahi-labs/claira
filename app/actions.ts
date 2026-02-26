@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import sodium from "libsodium-wrappers";
 
+
 const WORKFLOW_YAML = `name: Claude Code
 
 on:
@@ -214,4 +215,46 @@ export async function createSecret(repo: string, secretValue: string) {
   }
 
   return { success: true };
+}
+
+export async function checkRepoStatus(repo: string, branch: string) {
+  const session = await auth();
+  if (!session?.accessToken) {
+    return { workflowValid: false, secretExists: false };
+  }
+
+  if (!repo || !repo.includes("/")) {
+    return { workflowValid: false, secretExists: false };
+  }
+
+  const [owner, name] = repo.split("/");
+  const headers = {
+    Authorization: `Bearer ${session.accessToken}`,
+    Accept: "application/vnd.github+json",
+  };
+
+  const [workflowResult, secretResult] = await Promise.all([
+    // Check workflow file
+    fetch(
+      `https://api.github.com/repos/${owner}/${name}/contents/.github/workflows/claude.yml?ref=${branch}`,
+      { headers },
+    ).then(async (res) => {
+      if (!res.ok) return { valid: false };
+      const data = (await res.json()) as { content?: string; encoding?: string };
+      if (!data.content || data.encoding !== "base64") return { valid: false };
+      const decoded = Buffer.from(data.content, "base64").toString("utf-8");
+      return { valid: decoded.trim() === WORKFLOW_YAML.trim() };
+    }),
+
+    // Check secret exists
+    fetch(
+      `https://api.github.com/repos/${owner}/${name}/actions/secrets/CLAUDE_CODE_OAUTH_TOKEN`,
+      { headers },
+    ).then((res) => ({ exists: res.ok })),
+  ]);
+
+  return {
+    workflowValid: workflowResult.valid,
+    secretExists: secretResult.exists,
+  };
 }
