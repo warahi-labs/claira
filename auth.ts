@@ -7,14 +7,18 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
+declare module "@auth/core/jwt" {
   interface JWT {
     accessToken?: string;
   }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [GitHub],
+  providers: [
+    GitHub({
+      authorization: { params: { scope: "read:user user:email repo workflow" } },
+    }),
+  ],
   pages: {
     signIn: "/signin",
   },
@@ -26,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     session({ session, token }) {
-      session.accessToken = token.accessToken;
+      session.accessToken = token.accessToken as string | undefined;
       return session;
     },
   },

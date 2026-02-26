@@ -1,5 +1,6 @@
 import { auth, signOut } from "@/auth";
 import Image from "next/image";
+import RepoPicker from "./repo-picker";
 
 interface GitHubRepo {
   id: number;
@@ -25,7 +26,7 @@ export default async function Home() {
   return (
     <main className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm space-y-6 text-center">
-        <h1 className="text-3xl font-bold">Claira</h1>
+        <h1 className="text-3xl font-bold">Title</h1>
         {session?.user && (
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-3">
@@ -40,16 +41,7 @@ export default async function Home() {
               )}
               <p className="text-lg font-medium">{session.user.name}</p>
             </div>
-            {repos.length > 0 && (
-              <select className="w-full rounded-lg border border-foreground/20 bg-background px-3 py-2 text-sm">
-                <option value="">Select a repository</option>
-                {repos.map((repo) => (
-                  <option key={repo.id} value={repo.full_name}>
-                    {repo.full_name}
-                  </option>
-                ))}
-              </select>
-            )}
+            {repos.length > 0 && <RepoPicker repos={repos} />}
             <form
               action={async () => {
                 "use server";
