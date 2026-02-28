@@ -93,60 +93,6 @@ export async function fetchBranches(repo: string) {
   };
 }
 
-export async function setupClaude(repo: string, branch: string) {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return { error: "Not authenticated" };
-  }
-
-  if (!repo || !repo.includes("/")) {
-    return { error: "Invalid repo" };
-  }
-
-  const [owner, name] = repo.split("/");
-  const path = ".github/workflows/claude.yml";
-  const apiUrl = `https://api.github.com/repos/${owner}/${name}/contents/${path}`;
-  const headers = {
-    Authorization: `Bearer ${session.accessToken}`,
-    Accept: "application/vnd.github+json",
-  };
-
-  // Check if the file already exists on this branch
-  let existingSha: string | undefined;
-  const getRes = await fetch(`${apiUrl}?ref=${branch}`, { headers });
-  if (getRes.ok) {
-    const data = await getRes.json();
-    existingSha = data.sha;
-  }
-
-  // Push the workflow file
-  const putRes = await fetch(apiUrl, {
-    method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: existingSha
-        ? "Update Claude Code workflow"
-        : "Add Claude Code workflow",
-      content: Buffer.from(WORKFLOW_YAML).toString("base64"),
-      branch,
-      ...(existingSha && { sha: existingSha }),
-    }),
-  });
-
-  if (!putRes.ok) {
-    const err = await putRes.json();
-    return { error: (err.message as string) || `GitHub API error (${putRes.status})` };
-  }
-
-  const result = await putRes.json();
-  return {
-    success: true,
-    updated: !!existingSha,
-    htmlUrl: result.content?.html_url as string,
-    repo,
-  };
-}
-
 export async function createSecret(repo: string, secretValue: string) {
   const session = await auth();
   if (!session?.accessToken) {

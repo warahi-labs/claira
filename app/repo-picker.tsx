@@ -341,7 +341,7 @@ export default function RepoPicker({ repos }: { repos: Repo[] }) {
       {modalRepo && modalRepoData && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={closeModal}
+          onClick={() => { if (!(isDone && prStatus === "created")) closeModal(); }}
         >
           <div
             className="w-full max-w-lg rounded-xl border border-foreground/20 bg-background p-6 shadow-lg space-y-4"
@@ -349,13 +349,15 @@ export default function RepoPicker({ repos }: { repos: Repo[] }) {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{modalRepo}</h2>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-lg p-1 transition-colors hover:bg-foreground/10"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              {!(isDone && prStatus === "created") && (
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg p-1 transition-colors hover:bg-foreground/10"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
             </div>
 
             {modalCheck?.loading ? (
@@ -439,35 +441,69 @@ export default function RepoPicker({ repos }: { repos: Repo[] }) {
               </div>
             ) : modalCheck && isDone ? (
               /* Success state */
-              <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-sm space-y-3">
-                <p className="font-medium text-green-700 dark:text-green-400">Setup complete!</p>
+              <div className="space-y-4">
+                <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-sm space-y-3">
+                  {prStatus === "created" && prResult ? (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium">Workflow PR created</p>
+                          <a
+                            href={prResult.prUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-blue-500 underline text-xs mt-1"
+                          >
+                            View PR #{prResult.prNumber}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      </div>
 
-                {prStatus === "created" && prResult && (
-                  <div className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                    <div>
-                      <p>Workflow PR created</p>
-                      <a
-                        href={prResult.prUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-blue-500 underline text-xs"
-                      >
-                        View PR #{prResult.prNumber}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <p className="text-xs text-foreground/50 mt-1">
-                        Merge this PR to activate the workflow on <code className="bg-foreground/10 px-1 rounded">{modalBranch}</code>.
+                      {secretStatus === "saved" && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          <p>OAuth token saved as repository secret</p>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-foreground/50">
+                        Merge the PR to activate the workflow on <code className="bg-foreground/10 px-1 rounded">{modalBranch}</code>, then confirm below.
                       </p>
-                    </div>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium text-green-700 dark:text-green-400">Setup complete!</p>
+                      {secretStatus === "saved" && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          <p>OAuth token saved as repository secret</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
 
-                {secretStatus === "saved" && (
-                  <div className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500 shrink-0" />
-                    <p>OAuth token saved as repository secret</p>
-                  </div>
+                {prStatus === "created" && prResult ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeModal();
+                      invalidateAndRecheck(modalRepo, modalBranch);
+                    }}
+                    className="w-full rounded-lg bg-foreground text-background px-4 py-2 text-sm font-medium transition-colors hover:bg-foreground/90"
+                  >
+                    I&apos;ve merged the PR
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="w-full rounded-lg bg-foreground text-background px-4 py-2 text-sm font-medium transition-colors hover:bg-foreground/90"
+                  >
+                    Done
+                  </button>
                 )}
               </div>
             ) : null}
