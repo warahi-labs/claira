@@ -120,11 +120,6 @@ export default function RepoPicker({ repos }: { repos: Repo[] }) {
     setPrResult(null);
     setPrError("");
     setConfirmError("");
-    const branch =
-      selectedBranches[repo] ??
-      repos.find((r) => r.full_name === repo)?.default_branch ??
-      "main";
-    invalidateAndRecheck(repo, branch);
   }
 
   function closeModal() {
