@@ -217,6 +217,112 @@ export async function createSecret(repo: string, secretValue: string) {
   return { success: true };
 }
 
+export async function createWorkflowPR(repo: string, branch: string) {
+  const session = await auth();
+  if (!session?.accessToken) {
+    return { error: "Not authenticated" };
+  }
+
+  if (!repo || !repo.includes("/")) {
+    return { error: "Invalid repo" };
+  }
+
+  const [owner, name] = repo.split("/");
+  const headers = {
+    Authorization: `Bearer ${session.accessToken}`,
+    Accept: "application/vnd.github+json",
+    "Content-Type": "application/json",
+  };
+  const prBranch = "claude-code-setup";
+
+  // 1. Get SHA of base branch
+  const refRes = await fetch(
+    `https://api.github.com/repos/${owner}/${name}/git/ref/heads/${branch}`,
+    { headers },
+  );
+  if (!refRes.ok) {
+    return { error: `Could not resolve branch "${branch}" (${refRes.status})` };
+  }
+  const refData = (await refRes.json()) as { object: { sha: string } };
+  const baseSha = refData.object.sha;
+
+  // 2. Delete existing claude-code-setup branch if it exists (idempotent retry)
+  await fetch(
+    `https://api.github.com/repos/${owner}/${name}/git/refs/heads/${prBranch}`,
+    { method: "DELETE", headers },
+  );
+
+  // 3. Create claude-code-setup branch from base SHA
+  const createRefRes = await fetch(
+    `https://api.github.com/repos/${owner}/${name}/git/refs`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ ref: `refs/heads/${prBranch}`, sha: baseSha }),
+    },
+  );
+  if (!createRefRes.ok) {
+    const err = await createRefRes.json().catch(() => null);
+    return {
+      error:
+        (err as { message?: string })?.message ??
+        `Failed to create branch (${createRefRes.status})`,
+    };
+  }
+
+  // 4. Push workflow file to the new branch
+  const path = ".github/workflows/claude.yml";
+  const putRes = await fetch(
+    `https://api.github.com/repos/${owner}/${name}/contents/${path}`,
+    {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        message: "Add Claude Code workflow",
+        content: Buffer.from(WORKFLOW_YAML).toString("base64"),
+        branch: prBranch,
+      }),
+    },
+  );
+  if (!putRes.ok) {
+    const err = await putRes.json().catch(() => null);
+    return {
+      error:
+        (err as { message?: string })?.message ??
+        `Failed to push workflow file (${putRes.status})`,
+    };
+  }
+
+  // 5. Open PR from claude-code-setup → base branch
+  const prRes = await fetch(
+    `https://api.github.com/repos/${owner}/${name}/pulls`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        title: "Add Claude Code workflow",
+        head: prBranch,
+        base: branch,
+        body: "This PR adds the Claude Code GitHub Actions workflow.\n\nOnce merged, you can mention `@claude` in issues and pull requests to interact with Claude Code.",
+      }),
+    },
+  );
+  if (!prRes.ok) {
+    const err = await prRes.json().catch(() => null);
+    return {
+      error:
+        (err as { message?: string })?.message ??
+        `Failed to create PR (${prRes.status})`,
+    };
+  }
+
+  const prData = (await prRes.json()) as {
+    html_url: string;
+    number: number;
+  };
+  return { success: true, prUrl: prData.html_url, prNumber: prData.number };
+}
+
 export async function checkRepoStatus(repo: string, branch: string) {
   const session = await auth();
   if (!session?.accessToken) {
@@ -237,7 +343,7 @@ export async function checkRepoStatus(repo: string, branch: string) {
     // Check workflow file
     fetch(
       `https://api.github.com/repos/${owner}/${name}/contents/.github/workflows/claude.yml?ref=${branch}`,
-      { headers },
+      { headers, cache: "no-store" },
     ).then(async (res) => {
       if (!res.ok) return { valid: false };
       const data = (await res.json()) as { content?: string; encoding?: string };
@@ -249,7 +355,7 @@ export async function checkRepoStatus(repo: string, branch: string) {
     // Check secret exists
     fetch(
       `https://api.github.com/repos/${owner}/${name}/actions/secrets/CLAUDE_CODE_OAUTH_TOKEN`,
-      { headers },
+      { headers, cache: "no-store" },
     ).then((res) => ({ exists: res.ok })),
   ]);
 
