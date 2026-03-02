@@ -1,30 +1,11 @@
-import { auth, signOut } from "@/auth";
+import { signOutUser } from "@/actions/auth";
+import { fetchRepos } from "@/actions/github";
+import { auth } from "@/auth";
+import { Button } from "@/components/button";
 import Image from "next/image";
 import RepoPicker from "./repo-picker";
 
-interface GitHubRepo {
-  id: number;
-  full_name: string;
-  description: string | null;
-  language: string | null;
-  stargazers_count: number;
-  visibility: string;
-  updated_at: string;
-  default_branch: string;
-}
-
-async function fetchRepos(accessToken: string): Promise<GitHubRepo[]> {
-  const res = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/vnd.github+json",
-    },
-  });
-  if (!res.ok) return [];
-  return res.json();
-}
-
-export default async function Home() {
+export default async function Page() {
   const session = await auth();
 
   const repos = session?.accessToken ? await fetchRepos(session.accessToken) : [];
@@ -48,18 +29,10 @@ export default async function Home() {
               <p className="text-lg font-medium">{session.user.name}</p>
             </div>
             {repos.length > 0 && <RepoPicker repos={repos} />}
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/signin" });
-              }}
-            >
-              <button
-                type="submit"
-                className="rounded-lg border border-foreground/20 px-4 py-2 text-sm transition-colors hover:bg-foreground/5"
-              >
+            <form action={signOutUser}>
+              <Button type="submit" variant="outline">
                 Sign out
-              </button>
+              </Button>
             </form>
           </div>
         )}
