@@ -1,10 +1,7 @@
-import { ActionResponse } from "@/types/action";
+import { redirect } from "next/navigation";
 import { GitHubRepo } from "@/types/github";
 
-export async function fetchRepos(accessToken?: string): Promise<ActionResponse<GitHubRepo[]>> {
-  if (!accessToken) {
-    return { data: [], error: "Not authenticated" };
-  }
+export async function fetchRepos(accessToken: string): Promise<GitHubRepo[]> {
   const response = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -12,12 +9,10 @@ export async function fetchRepos(accessToken?: string): Promise<ActionResponse<G
     },
   });
   if (!response.ok) {
-    return { data: [], error: `Failed to fetch repos (${response.status})` };
+    redirect("/error");
   }
   const repos: GitHubRepo[] = await response.json();
-  return {
-    data: repos.map(({ id, full_name, description, language, stargazers_count, visibility, default_branch }) => ({
-      id, full_name, description, language, stargazers_count, visibility, default_branch,
-    })),
-  };
+  return repos.map(({ id, full_name, description, language, stargazers_count, visibility, default_branch }) => ({
+    id, full_name, description, language, stargazers_count, visibility, default_branch,
+  }));
 }

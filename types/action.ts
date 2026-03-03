@@ -1,1 +1,1 @@
-export type ActionResponse<T> = { data: T; error?: string };
+export type ActionResult<T> = { data: T; error?: string };
