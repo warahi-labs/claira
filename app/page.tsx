@@ -30,7 +30,7 @@ export default async function Page() {
             </div>
             {repos.length > 0 && <RepoPicker repos={repos} />}
             <form action={signOutUser}>
-              <Button type="submit" variant="outline">
+              <Button type="submit" variant="outline" className="w-auto">
                 Sign out
               </Button>
             </form>

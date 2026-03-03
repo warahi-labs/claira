@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes } from "react";
+import { cn } from "@/utils/tailwind";
 
 const variants = {
   solid: "bg-foreground text-background hover:opacity-90",
@@ -13,7 +14,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({ children, className, variant = "solid", ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all ${variants[variant]} ${className ?? ""}`}
+      className={cn(
+        "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all",
+        variants[variant],
+        className
+      )}
       {...props}
     >
       {children}
