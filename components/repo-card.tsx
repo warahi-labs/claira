@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Loader2, Unplug } from "lucide-react";
-import { AsyncSelect } from "@/components/async-select";
+import { Select } from "@/components/select";
 
 type BranchOption = { value: string; label: string };
 
@@ -11,7 +11,6 @@ interface Repo {
   language: string | null;
   stargazers_count: number;
   visibility: string;
-  updated_at: string;
   default_branch: string;
 }
 
@@ -25,7 +24,9 @@ interface RepoCardProps {
   repo: Repo;
   chosenBranch: string;
   check: SetupCheck | undefined;
-  loadBranches: (input: string) => Promise<BranchOption[]>;
+  branches: BranchOption[];
+  branchesLoading: boolean;
+  onLoadBranches: () => void;
   onBranchChange: (branch: string) => void;
   onConnect: () => void;
   onGetStarted: () => void;
@@ -35,7 +36,9 @@ export default function RepoCard({
   repo,
   chosenBranch,
   check,
-  loadBranches,
+  branches,
+  branchesLoading,
+  onLoadBranches,
   onBranchChange,
   onConnect,
   onGetStarted,
@@ -91,11 +94,11 @@ export default function RepoCard({
       </div>
 
       <div className="mt-2">
-        <AsyncSelect
+        <Select
           instanceId={`branch-${repo.id}`}
-          cacheOptions
-          defaultOptions
-          loadOptions={loadBranches}
+          options={branches}
+          isLoading={branchesLoading}
+          onMenuOpen={onLoadBranches}
           value={{ value: chosenBranch, label: chosenBranch }}
           onChange={(opt) => opt && onBranchChange(opt.value)}
         />

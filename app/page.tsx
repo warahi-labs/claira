@@ -8,7 +8,9 @@ import RepoPicker from "./repo-picker";
 export default async function Page() {
   const session = await auth();
 
-  const repos = session?.accessToken ? await fetchRepos(session.accessToken) : [];
+  const { data: repos, error: reposError } = await fetchRepos(session?.accessToken);
+
+  /** @TODO - Handle reposError */
 
   return (
     <main className="min-h-screen p-6">

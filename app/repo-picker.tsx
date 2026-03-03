@@ -7,6 +7,7 @@ import CreateBoardModal from "@/components/create-board-modal";
 import { fetchBranches, checkRepoStatus } from "./actions";
 import { GitHubRepo } from "@/types/github";
 
+type BranchOption = { value: string; label: string };
 type Branch = { name: string; default: boolean };
 
 interface SetupCheck {
@@ -23,6 +24,8 @@ export default function RepoPicker({ repos }: { repos: GitHubRepo[] }) {
     }
     return initial;
   });
+  const [branchOptions, setBranchOptions] = useState<Record<string, BranchOption[]>>({});
+  const [branchLoading, setBranchLoading] = useState<Record<string, boolean>>({});
   const [statusCache, setStatusCache] = useState<Record<string, SetupCheck>>({});
   const [modalRepo, setModalRepo] = useState<string | null>(null);
   const [getStartedRepo, setGetStartedRepo] = useState<string | null>(null);
@@ -37,17 +40,20 @@ export default function RepoPicker({ repos }: { repos: GitHubRepo[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function loadBranchOptions(repo: string, inputValue: string) {
+  async function loadBranches(repo: string) {
+    if (branchOptions[repo] || branchLoading[repo]) return;
+    setBranchLoading((prev) => ({ ...prev, [repo]: true }));
     const result = await fetchBranches(repo);
-    if ("error" in result) return [];
+    if ("error" in result) {
+      setBranchLoading((prev) => ({ ...prev, [repo]: false }));
+      return;
+    }
     const options = result.branches.map((b: Branch) => ({
       value: b.name,
       label: b.default ? `${b.name} (default)` : b.name,
     }));
-    if (!inputValue) return options;
-    return options.filter((o: { value: string; label: string }) =>
-      o.label.toLowerCase().includes(inputValue.toLowerCase())
-    );
+    setBranchOptions((prev) => ({ ...prev, [repo]: options }));
+    setBranchLoading((prev) => ({ ...prev, [repo]: false }));
   }
 
   async function checkStatus(repo: string, branch: string) {
@@ -115,7 +121,9 @@ export default function RepoPicker({ repos }: { repos: GitHubRepo[] }) {
               repo={repo}
               chosenBranch={chosenBranch}
               check={statusCache[cacheKey]}
-              loadBranches={(input) => loadBranchOptions(repo.full_name, input)}
+              branches={branchOptions[repo.full_name] ?? []}
+              branchesLoading={branchLoading[repo.full_name] ?? false}
+              onLoadBranches={() => loadBranches(repo.full_name)}
               onBranchChange={(newBranch) => {
                 setSelectedBranches((prev) => ({ ...prev, [repo.full_name]: newBranch }));
                 checkStatus(repo.full_name, newBranch);
