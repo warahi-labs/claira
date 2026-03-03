@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { signOutUser } from "@/actions/auth";
 import { fetchRepos } from "@/actions/github";
 import { auth } from "@/auth";
@@ -7,13 +6,9 @@ import Image from "next/image";
 import RepoPicker from "./repo-picker";
 
 export default async function Page() {
-  const session = await auth();
-
-  if (!session?.user || !session.accessToken) {
-    redirect("/auth-error");
-  }
-
-  const repos = await fetchRepos(session.accessToken);
+  const session = (await auth())!;
+  const user = session.user!;
+  const repos = await fetchRepos(session.accessToken!);
 
   return (
     <main className="min-h-screen p-6">
@@ -21,16 +16,16 @@ export default async function Page() {
         <h1 className="text-3xl font-bold">Title</h1>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3">
-            {session.user.image && (
+            {user.image && (
               <Image
-                src={session.user.image}
-                alt={session.user.name ?? "Avatar"}
+                src={user.image}
+                alt={user.name ?? "Avatar"}
                 width={80}
                 height={80}
                 className="rounded-full"
               />
             )}
-            <p className="text-lg font-medium">{session.user.name}</p>
+            <p className="text-lg font-medium">{user.name}</p>
           </div>
           {repos.length > 0 && <RepoPicker repos={repos} />}
           <form action={signOutUser}>

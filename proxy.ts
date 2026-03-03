@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const { nextUrl } = req;
-  const isAuthenticated = !!req.auth;
+  const isAuthenticated = !!req.auth?.user && !!req.auth.accessToken;
 
   // Allow API auth routes to pass through
   if (nextUrl.pathname.startsWith("/api/auth")) {
