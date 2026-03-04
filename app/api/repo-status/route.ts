@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { CLAUDE_CODE_EXECUTION_WORKFLOW_YAML } from "@/constants/claude";
+import { checkWorkflow, checkSecret } from "@/actions/github";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -16,31 +16,10 @@ export async function GET(req: NextRequest) {
   }
 
   const [owner, name] = repo.split("/");
-  const headers = {
-    Authorization: `Bearer ${session.accessToken}`,
-    Accept: "application/vnd.github+json",
-  };
-
-  const [workflowResult, secretResult] = await Promise.all([
-    fetch(
-      `https://api.github.com/repos/${owner}/${name}/contents/.github/workflows/claude.yml?ref=${branch}`,
-      { headers, cache: "no-store" },
-    ).then(async (res) => {
-      if (!res.ok) return { valid: false };
-      const data = (await res.json()) as { content?: string; encoding?: string };
-      if (!data.content || data.encoding !== "base64") return { valid: false };
-      const decoded = Buffer.from(data.content, "base64").toString("utf-8");
-      return { valid: decoded.trim() === CLAUDE_CODE_EXECUTION_WORKFLOW_YAML.trim() };
-    }),
-
-    fetch(
-      `https://api.github.com/repos/${owner}/${name}/actions/secrets/CLAUDE_CODE_OAUTH_TOKEN`,
-      { headers, cache: "no-store" },
-    ).then((res) => ({ exists: res.ok })),
+  const [workflowValid, secretExists] = await Promise.all([
+    checkWorkflow(session.accessToken, owner, name, branch),
+    checkSecret(session.accessToken, owner, name),
   ]);
 
-  return NextResponse.json({
-    workflowValid: workflowResult.valid,
-    secretExists: secretResult.exists,
-  });
+  return NextResponse.json({ workflowValid, secretExists });
 }
