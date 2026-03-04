@@ -1,14 +1,17 @@
 import { signOutUser } from "@/actions/auth";
-import { fetchRepos } from "@/actions/github";
+import { fetchRepos, fetchAllRepoStatuses } from "@/actions/github";
 import { auth } from "@/auth";
 import { Button } from "@/components/button";
+import RepoCard from "@/components/repo-card";
 import Image from "next/image";
-import RepoPicker from "./repo-picker";
 
 export default async function Page() {
   const session = (await auth())!;
   const user = session.user!;
   const repos = await fetchRepos(session.accessToken!);
+  const statuses = repos.length > 0
+    ? await fetchAllRepoStatuses(repos, session.accessToken!)
+    : {};
 
   return (
     <main className="min-h-screen p-6">
@@ -27,7 +30,17 @@ export default async function Page() {
             )}
             <p className="text-lg font-medium">{user.name}</p>
           </div>
-          {repos.length > 0 && <RepoPicker repos={repos} />}
+          {repos.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {repos.map((repo) => (
+                <RepoCard
+                  key={repo.id}
+                  repo={repo}
+                  initialStatus={statuses[repo.full_name]}
+                />
+              ))}
+            </div>
+          )}
           <form action={signOutUser}>
             <Button type="submit" variant="outline" className="w-auto">
               Sign out

@@ -30,11 +30,11 @@ export async function checkWorkflow(accessToken: string, owner: string, name: st
     },
   );
   if (!response.ok) {
-    redirect("/error");
+    return false;
   }
   const data: { content?: string; encoding?: string } = await response.json();
   if (!data.content || data.encoding !== "base64") {
-    redirect("/error");
+    return false;
   }
   const decoded = Buffer.from(data.content, "base64").toString("utf-8");
   return decoded.trim() === CLAUDE_CODE_EXECUTION_WORKFLOW_YAML.trim();
@@ -52,4 +52,26 @@ export async function checkSecret(accessToken: string, owner: string, name: stri
     },
   );
   return response.ok;
+}
+
+export interface RepoStatus {
+  workflowValid: boolean;
+  secretExists: boolean;
+}
+
+export async function fetchAllRepoStatuses(
+  repos: GitHubRepo[],
+  accessToken: string,
+): Promise<Record<string, RepoStatus>> {
+  const entries = await Promise.all(
+    repos.map(async (repo) => {
+      const [owner, name] = repo.full_name.split("/");
+      const [workflowValid, secretExists] = await Promise.all([
+        checkWorkflow(accessToken, owner, name, repo.default_branch),
+        checkSecret(accessToken, owner, name),
+      ]);
+      return [repo.full_name, { workflowValid, secretExists }] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
 }
