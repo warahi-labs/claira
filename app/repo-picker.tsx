@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import RepoCard from "@/components/repo-card";
 import ConnectModal from "@/components/connect-modal";
 import CreateBoardModal from "@/components/create-board-modal";
-import { fetchBranches, checkRepoStatus } from "./actions";
+import { fetchBranches } from "./actions";
 import { GitHubRepo } from "@/types/github";
 
 type BranchOption = { value: string; label: string };
@@ -66,7 +66,8 @@ export default function RepoPicker({ repos }: { repos: GitHubRepo[] }) {
     }));
 
     try {
-      const result = await checkRepoStatus(repo, branch);
+      const res = await fetch(`/api/repo-status?repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branch)}`);
+      const result = await res.json();
       setStatusCache((prev) => ({
         ...prev,
         [cacheKey]: {
